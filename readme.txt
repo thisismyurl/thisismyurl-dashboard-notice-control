@@ -26,7 +26,7 @@ Important:
 * This plugin intentionally hides all notices, including potentially important update or security messages.
 * Recommended for controlled environments where notice noise blocks productivity and you have an alternative update/security monitoring process.
 
-Safety controls (v1.0.1):
+Safety controls (v1.6140):
 
 * Emergency request bypass for administrators:
 	`?thisismyurl_nomore_show_notices=1`
@@ -86,7 +86,7 @@ It can interfere with plugins that rely on visible notices for workflow guidance
 Some plugins store a "dismissed" state only after the dismiss button is clicked. Auto-dismiss helps keep those plugins in a consistent state.
 
 = Is auto-dismiss enabled by default? =
-No. Since 1.0.1, auto-dismiss is opt-in using `THISISMYURL_ADMIN_NOTICE_NOMORE_AUTO_DISMISS` or the matching filter.
+No. Auto-dismiss is opt-in using `THISISMYURL_ADMIN_NOTICE_NOMORE_AUTO_DISMISS` or the matching filter.
 
 == Changelog ==
 
@@ -111,5 +111,5 @@ No. Since 1.0.1, auto-dismiss is opt-in using `THISISMYURL_ADMIN_NOTICE_NOMORE_A
 
 == Upgrade Notice ==
 
-= 1.0.1 =
-Adds emergency bypass controls, safer defaults, and scoped suppression behavior.
+= 1.6140 =
+Adds easier bypass controls, nonce-protected bypass URLs, and the `1.6NNN` calendar-version release.
