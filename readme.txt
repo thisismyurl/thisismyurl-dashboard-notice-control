@@ -1,6 +1,10 @@
 === This Is My URL Admin Notice NoMore ===
 Contributors: thisismyurl
+Author: Christopher Ross
+Author URI: https://thisismyurl.com/
+Plugin URI: https://github.com/thisismyurl/thisismyurl-admin-notice-nomore
 Donate link: https://thisismyurl.com/donate/
+Support Link: https://thisismyurl.com/contact/
 Tags: admin notices, dashboard cleanup, wp admin, notifications, admin ui
 Requires at least: 6.0
 Tested up to: 6.8
@@ -14,6 +18,8 @@ Automatically dismisses and hides WordPress admin notices across wp-admin.
 == Description ==
 
 This Is My URL Admin Notice NoMore suppresses all admin notices in the WordPress dashboard.
+
+If this plugin saves you time, consider supporting the work at https://thisismyurl.com/donate/.
 
 What it does:
 
@@ -46,6 +52,11 @@ Ease-of-use shortcuts:
 
 * Plugin action link on Plugins screen: "Show Notices Once"
 * Admin bar shortcut for administrators: "Show Notices Once"
+
+Support:
+
+* Donations: https://thisismyurl.com/donate/
+* Support: https://thisismyurl.com/contact/
 
 == Accessibility Considerations ==
 

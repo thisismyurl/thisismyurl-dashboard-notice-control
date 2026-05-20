@@ -4,6 +4,8 @@ Current version: 1.6140
 
 This Is My URL Admin Notice NoMore is a lightweight WordPress plugin that suppresses admin notices across wp-admin.
 
+If it saves you time or removes dashboard friction, you can support the work here: https://thisismyurl.com/donate/
+
 ## What It Does
 
 - Removes all registered callbacks for WordPress notice hooks.
@@ -34,6 +36,12 @@ This plugin provides an explicit, all-or-nothing suppression mode for teams that
 - Can mask helpful guidance from plugins that rely on notice-based UX.
 
 Use in staging first, and only deploy to production when your update/security process does not depend on admin notice visibility.
+
+## Support and Donations
+
+- Donate: https://thisismyurl.com/donate/
+- Support: https://thisismyurl.com/contact/
+- Source and releases: https://github.com/thisismyurl/thisismyurl-admin-notice-nomore
 
 ## Safety Controls
 
