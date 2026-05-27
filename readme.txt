@@ -9,7 +9,7 @@ Tags: admin notices, dashboard cleanup, wp admin, notifications, admin ui
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.6143
+Stable tag: 1.6147
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -100,6 +100,11 @@ Some plugins store a "dismissed" state only after the dismiss button is clicked.
 No. Auto-dismiss is opt-in using `THISISMYURL_ADMIN_NOTICE_NOMORE_AUTO_DISMISS` or the matching filter.
 
 == Changelog ==
+
+= 1.6147 =
+* Unified plugin versioning to the x.Yddd calendar-version scheme.
+* Confirmed compatibility with WordPress 7.0.
+
 
 = 1.6143 =
 * Updated `Tested up to` to WordPress 7.0.

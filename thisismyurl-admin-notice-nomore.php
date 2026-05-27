@@ -3,7 +3,7 @@
  * Plugin Name:       This Is My URL - Admin Notice NoMore
  * Plugin URI:        https://thisismyurl.com
  * Description:       Automatically dismisses and hides all WordPress admin notices.
- * Version:           1.6143
+ * Version:           1.6147
  * Author:            This Is My URL
  * Author URI:        https://thisismyurl.com
  * Requires at least: 6.0
@@ -24,7 +24,7 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 	/**
 	 * Plugin version.
 	 */
-	const VERSION = '1.6143';
+	const VERSION = '1.6147';
 
 	/**
 	 * Query var used for one-request bypass.
