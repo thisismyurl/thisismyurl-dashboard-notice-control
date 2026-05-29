@@ -93,10 +93,6 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 			}
 		}
 
-		if ( current_user_can( 'manage_options' ) && isset( $_GET[ self::BYPASS_QUERY_VAR ] ) && ! isset( $_GET[ self::BYPASS_NONCE_VAR ] ) ) {
-			$bypass = true;
-		}
-
 		return (bool) apply_filters( 'thisismyurl_admin_notice_nomore_bypass', $bypass );
 	}
 
@@ -117,12 +113,31 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 
 	/**
 	 * Remove all known notice action stacks before they render.
+	 *
+	 * Per-site notice hooks (`admin_notices`, `all_admin_notices`) are always
+	 * cleared. The network-scoped hooks (`network_admin_notices`,
+	 * `user_admin_notices`) are cleared too by default, but that suppression is
+	 * global to the whole multisite network and stomps every other plugin's
+	 * network notices, so it is gated behind a filter that can opt out without
+	 * disabling the plugin entirely.
 	 */
 	public static function remove_notice_actions() {
 		remove_all_actions( 'admin_notices' );
 		remove_all_actions( 'all_admin_notices' );
-		remove_all_actions( 'network_admin_notices' );
-		remove_all_actions( 'user_admin_notices' );
+
+		/**
+		 * Filter whether network-scoped admin notices are also suppressed.
+		 *
+		 * Defaults to true to preserve historical behaviour. Set to false to
+		 * leave `network_admin_notices` and `user_admin_notices` untouched so a
+		 * single site's notice-suppression does not silence the whole network.
+		 *
+		 * @param bool $suppress Whether to suppress network-scoped notices.
+		 */
+		if ( apply_filters( 'thisismyurl_admin_notice_nomore_suppress_network', true ) ) {
+			remove_all_actions( 'network_admin_notices' );
+			remove_all_actions( 'user_admin_notices' );
+		}
 	}
 
 	/**
@@ -214,7 +229,12 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 	}
 
 	/**
-	 * Add an admin-bar shortcut for one-request bypass.
+	 * Add an admin-bar indicator showing suppression state, with a bypass link.
+	 *
+	 * Notice suppression is otherwise invisible, which generates "where did my
+	 * update notice go?" support tickets. This persistent indicator names the
+	 * state ("Notices: hidden" / "Notices: showing") so administrators always
+	 * know the plugin is active, and nests the one-request bypass link under it.
 	 *
 	 * @param WP_Admin_Bar $admin_bar Admin bar object.
 	 * @return void
@@ -224,13 +244,35 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 			return;
 		}
 
+		$suppressing = self::is_enabled() && ! self::is_bypassed();
+
+		$title = $suppressing
+			? esc_html__( 'Notices: hidden', 'thisismyurl-admin-notice-nomore' )
+			: esc_html__( 'Notices: showing', 'thisismyurl-admin-notice-nomore' );
+
 		$admin_bar->add_node(
 			array(
-				'id'    => 'thisismyurl-admin-notice-nomore-bypass',
-				'title' => esc_html__( 'Show Notices Once', 'thisismyurl-admin-notice-nomore' ),
+				'id'    => 'thisismyurl-admin-notice-nomore',
+				'title' => $title,
 				'href'  => esc_url( self::bypass_url( admin_url() ) ),
+				'meta'  => array(
+					'title' => $suppressing
+						? esc_attr__( 'Admin notices are being suppressed by Admin Notice NoMore. Click to show notices for one request.', 'thisismyurl-admin-notice-nomore' )
+						: esc_attr__( 'Admin notices are visible for this request.', 'thisismyurl-admin-notice-nomore' ),
+				),
 			)
 		);
+
+		if ( $suppressing ) {
+			$admin_bar->add_node(
+				array(
+					'parent' => 'thisismyurl-admin-notice-nomore',
+					'id'     => 'thisismyurl-admin-notice-nomore-bypass',
+					'title'  => esc_html__( 'Show notices once', 'thisismyurl-admin-notice-nomore' ),
+					'href'   => esc_url( self::bypass_url( admin_url() ) ),
+				)
+			);
+		}
 	}
 }
 

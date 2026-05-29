@@ -34,8 +34,9 @@ Important:
 
 Safety controls (v1.6140):
 
-* Emergency request bypass for administrators:
-	`?thisismyurl_nomore_show_notices=1`
+* Emergency request bypass for administrators (use the nonce-signed link from
+	the admin bar or Plugins screen; the nonce is required):
+	`?thisismyurl_nomore_show_notices=1&thisismyurl_nomore_nonce=...`
 * Constant toggle:
 	`THISISMYURL_ADMIN_NOTICE_NOMORE_ENABLED`
 * Constant bypass:
@@ -100,6 +101,11 @@ Some plugins store a "dismissed" state only after the dismiss button is clicked.
 No. Auto-dismiss is opt-in using `THISISMYURL_ADMIN_NOTICE_NOMORE_AUTO_DISMISS` or the matching filter.
 
 == Changelog ==
+
+= 1.6148 =
+* Security: the administrator bypass URL now requires a valid nonce on every path. The previous nonce-less fallback made the nonce-protected bypass claim decorative.
+* Multisite: network-scoped notice suppression (`network_admin_notices`, `user_admin_notices`) is now gated behind the `thisismyurl_admin_notice_nomore_suppress_network` filter (defaults to true) so one site no longer silences the whole network without an opt-out.
+* Support: the admin-bar item now shows whether notices are hidden or showing, so administrators can see suppression is active and don't lose update or security nags silently.
 
 = 1.6147 =
 * Unified plugin versioning to the x.Yddd calendar-version scheme.
