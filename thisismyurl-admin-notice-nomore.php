@@ -3,7 +3,7 @@
  * Plugin Name:       Admin Notice NoMore by Christopher Ross
  * Plugin URI:        https://thisismyurl.com
  * Description:       Automatically dismisses and hides all WordPress admin notices.
- * Version:           1.6148.2110
+ * Version:           1.6158.1440
  * Author:            Christopher Ross
  * Author URI:        https://thisismyurl.com
  * Requires at least: 6.0
@@ -24,7 +24,7 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 	/**
 	 * Plugin version.
 	 */
-	const VERSION = '1.6148.2110';
+	const VERSION = '1.6158.1440';
 
 	/**
 	 * Query var used for one-request bypass.
