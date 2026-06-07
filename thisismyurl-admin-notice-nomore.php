@@ -24,7 +24,7 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 	/**
 	 * Plugin version.
 	 */
-	const VERSION = '1.6147';
+	const VERSION = '1.6148.2110';
 
 	/**
 	 * Query var used for one-request bypass.
@@ -161,7 +161,7 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 		$selector_css = implode( ',', $selectors );
 
 		echo '<style id="thisismyurl-admin-notice-nomore">';
-		echo esc_html( $selector_css ) . '{display:none !important;}';
+		echo wp_strip_all_tags( $selector_css ) . '{display:none !important;}';
 		echo '</style>';
 	}
 
