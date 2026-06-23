@@ -9,7 +9,7 @@ Tags: admin notices, dashboard cleanup, wp admin, notifications, admin ui
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.6148.2110
+Stable tag: 1.6174.1641
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -17,9 +17,9 @@ Automatically dismisses and hides WordPress admin notices across wp-admin.
 
 == Description ==
 
-Christopher Ross Admin Notice NoMore suppresses all admin notices in the WordPress dashboard.
+Admin Notice NoMore by Christopher Ross suppresses all admin notices in the WordPress dashboard.
 
-If this plugin saves you time, consider supporting the work at https://thisismyurl.com/donate/.
+If this plugin saves you time, consider supporting the work at https://github.com/sponsors/thisismyurl.
 
 What it does:
 
@@ -32,7 +32,7 @@ Important:
 * This plugin intentionally hides all notices, including potentially important update or security messages.
 * Recommended for controlled environments where notice noise blocks productivity and you have an alternative update/security monitoring process.
 
-Safety controls (v1.6140):
+Safety controls (v1.6174.1641):
 
 * Emergency request bypass for administrators (use the nonce-signed link from
 	the admin bar or Plugins screen; the nonce is required):
@@ -47,16 +47,22 @@ Safety controls (v1.6140):
 	`thisismyurl_admin_notice_nomore_enabled`,
 	`thisismyurl_admin_notice_nomore_bypass`,
 	`thisismyurl_admin_notice_nomore_auto_dismiss`,
-	`thisismyurl_admin_notice_nomore_css_selectors`
+	`thisismyurl_admin_notice_nomore_css_selectors`,
+	`thisismyurl_admin_notice_nomore_suppress_network`
 
 Ease-of-use shortcuts:
 
-* Plugin action link on Plugins screen: "Show Notices Once"
+* Settings page at Settings > Admin Notice NoMore
+* Plugin action links on Plugins screen: "Settings" and "Show Notices Once"
 * Admin bar shortcut for administrators: "Show Notices Once"
+
+Per-plugin allowlist (v1.6174.1641):
+
+Enter plugin slugs (one per line) at Settings > Admin Notice NoMore. Notices from allowlisted plugins pass through suppression. Matching is done by checking whether the callback source file path contains /plugins/<slug>/.
 
 Support:
 
-* Donations: https://thisismyurl.com/donate/
+* Donations: https://github.com/sponsors/thisismyurl
 * Support: https://thisismyurl.com/contact/
 
 == Accessibility Considerations ==
@@ -102,6 +108,21 @@ No. Auto-dismiss is opt-in using `THISISMYURL_ADMIN_NOTICE_NOMORE_AUTO_DISMISS` 
 
 == Changelog ==
 
+= 1.6174.1641 =
+* Added Settings > Admin Notice NoMore settings page (menu slug thisismyurl-nomore-settings).
+* Added per-plugin allowlist: enter plugin slugs whose notices should pass through suppression.
+* Allowlist stored in option thisismyurl_nomore_allowlist; each slug sanitized via sanitize_key().
+* Callback allowlist check uses ReflectionFunction / ReflectionMethod to resolve source file paths.
+* Added "Settings" link to plugin action links row.
+* Security: replaced esc_html() with a CSS-selector character allowlist regex for inline style output.
+* Added autoload => false to register_setting() for the allowlist option.
+* Added uninstall.php to clean up options on plugin deletion.
+* Added .distignore to exclude .git/, CHANGELOG.md, README.md from distribution zip.
+
+= 1.6158 =
+* CSS context: replaced esc_html() with wp_strip_all_tags() for inline style selector output (correct escaping context for a style block).
+* Version constant: synchronised VERSION class constant with plugin header on every release.
+
 = 1.6148 =
 * Security: the administrator bypass URL now requires a valid nonce on every path. The previous nonce-less fallback made the nonce-protected bypass claim decorative.
 * Multisite: network-scoped notice suppression (`network_admin_notices`, `user_admin_notices`) is now gated behind the `thisismyurl_admin_notice_nomore_suppress_network` filter (defaults to true) so one site no longer silences the whole network without an opt-out.
@@ -111,14 +132,13 @@ No. Auto-dismiss is opt-in using `THISISMYURL_ADMIN_NOTICE_NOMORE_AUTO_DISMISS` 
 * Unified plugin versioning to the x.Yddd calendar-version scheme.
 * Confirmed compatibility with WordPress 7.0.
 
-
 = 1.6143 =
 * Updated `Tested up to` to WordPress 7.0.
 * Standardized the donation link to GitHub Sponsors.
 * Added project governance files (PILLARS, CONTRIBUTING, SECURITY) and README badges.
 
 = 1.6140 =
-* Updated display name to "Christopher Ross Admin Notice NoMore".
+* Updated display name to "Admin Notice NoMore by Christopher Ross".
 * Added nonce-protected bypass URLs.
 * Added quick bypass shortcuts in plugin action links and admin bar.
 * Version moved to calendar format `1.6NNN`.
@@ -137,6 +157,12 @@ No. Auto-dismiss is opt-in using `THISISMYURL_ADMIN_NOTICE_NOMORE_AUTO_DISMISS` 
 * Added JavaScript auto-dismiss for dismissible notices.
 
 == Upgrade Notice ==
+
+= 1.6174.1641 =
+Adds per-plugin allowlist settings page, uninstall cleanup, and security hardening for the CSS output and bypass nonce path.
+
+= 1.6148 =
+Security fix: bypass now requires a valid nonce unconditionally. Multisite filter added. Admin-bar suppression indicator added.
 
 = 1.6140 =
 Adds easier bypass controls, nonce-protected bypass URLs, and the `1.6NNN` calendar-version release.

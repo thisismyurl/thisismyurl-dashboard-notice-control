@@ -1,40 +1,35 @@
 # Changelog
 
-All notable changes to **Admin Notice NoMore by thisismyurl.com** are documented here.
-The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
-project uses the `x.Yddd` versioning scheme: `x` = release class (`0` = pre-release,
-`1` = full), `Y` = last digit of the year, `ddd` = Julian day.
+## 1.6174.1641 — 2026-06-23
 
-## [1.6143] — 2026-05-23
+- Added Settings > Admin Notice NoMore settings page (menu slug `thisismyurl-nomore-settings`) under Settings menu.
+- Added per-plugin allowlist textarea: administrators enter plugin slugs (one per line) whose notices should pass through suppression even when the plugin is active.
+- Allowlist stored in WP option `thisismyurl_nomore_allowlist`; each slug sanitized via `sanitize_key()`.
+- `remove_notice_actions()` now inspects each registered callback individually when an allowlist is present; uses `ReflectionFunction` / `ReflectionMethod` (wrapped in try/catch) to resolve the callback's source file path, then checks for `/plugins/<slug>/` in that path before removing.
+- Empty allowlist takes the fast path (`remove_all_actions`) with no reflection overhead.
+- Added "Settings" link (prepended) to plugin action links row on the Plugins screen.
+- Settings form uses `register_setting()` / `settings_fields()` for nonce protection and capability enforcement.
+- All page output escaped with `esc_html_e()`, `esc_attr()`, `esc_url()`, `esc_textarea()`.
+- All capability checks via `current_user_can( 'manage_options' )`.
 
-### Changed
-- Updated `Tested up to` to WordPress 7.0.
-- Standardized the donation link to GitHub Sponsors (`https://github.com/sponsors/thisismyurl`).
+## 1.6140
 
-### Added
-- Project governance files: `PILLARS.md`, `CONTRIBUTING.md`, `SECURITY.md`, and README badges.
+- Updated display name to This Is My URL Admin Notice NoMore.
+- Added nonce-protected one-request bypass URLs.
+- Added quick bypass shortcuts in plugin action links and admin bar.
+- Version moved to calendar format `1.6NNN`.
 
-## [1.6140] — 2026-05-20
+## 1.0.1
 
-### Changed
-- Updated display name to Christopher Ross Admin Notice NoMore.
-- Version moved to the `x.Yddd` Julian-day scheme.
-
-### Added
-- Nonce-protected one-request bypass URLs.
-- Quick bypass shortcuts in plugin action links and the admin bar.
-
-## [1.0.1]
-
-### Added
-- Emergency bypass for administrators via query parameter.
-- Constants and filters for enable, bypass, and auto-dismiss control.
-
-### Changed
-- Switched auto-dismiss to opt-in by default.
+- Added emergency bypass support for administrators via query parameter.
+- Added constants and filters for enable/bypass/autodismiss control.
+- Switched auto-dismiss to opt-in default.
 - Scoped CSS selectors to notice contexts in `#wpbody-content`.
+- Added accessibility and operational guidance.
 
-## [1.0.0]
+## 1.0.0
 
-### Added
-- Initial release: global removal of admin-notice hooks, a CSS fallback for directly printed markup, and opt-in JavaScript auto-dismiss.
+- Initial release.
+- Added global removal of admin notice hooks.
+- Added CSS fallback for directly printed notice markup.
+- Added JavaScript auto-dismiss for dismissible notices.

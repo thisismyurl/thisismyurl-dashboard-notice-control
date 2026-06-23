@@ -1,0 +1,8 @@
+# Files and directories excluded from the WordPress.org distribution zip.
+# Build tools should use this file (e.g. wp dist-archive) to strip non-distribution assets.
+
+.git
+.gitignore
+.distignore
+CHANGELOG.md
+README.md

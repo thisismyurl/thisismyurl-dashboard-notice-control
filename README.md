@@ -1,18 +1,22 @@
-# Admin Notice NoMore
+# This Is My URL Admin Notice NoMore
 
-[![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-21759b.svg)](https://wordpress.org/) [![License](https://img.shields.io/badge/License-GPL--2.0--or--later-blue.svg)](LICENSE)
+Current version: 1.6174.1641
 
-Suppresses admin notices across wp-admin, with safety controls for the cases where you need them back.
+This Is My URL Admin Notice NoMore is a lightweight WordPress plugin that suppresses admin notices across wp-admin.
 
-## What it does
+If it saves you time or removes dashboard friction, you can support the work here: https://thisismyurl.com/donate/
 
-- Removes all registered callbacks for WordPress notice hooks
-- Hides any remaining notice UI with scoped admin-side CSS
-- Offers an optional auto-dismiss mode for dismissible notices (off by default)
+## What It Does
 
-## Why it exists
+- Removes all registered callbacks for WordPress notice hooks.
+- Hides remaining notice UI via scoped admin-side CSS.
+- Optional auto-dismiss mode for dismissible notices (disabled by default).
 
-Some dashboards drown in plugin and update notices. The noise wears people down and makes the admin harder to work in. This plugin gives you one blunt option: turn the notices off. It is meant for teams that already handle updates, alerts, and security checks outside the dashboard, so the notices were never doing the job anyway.
+## Why It Exists
+
+Some admin environments are overwhelmed by plugin and update notices, which can reduce focus and increase dashboard friction.
+
+This plugin provides an explicit, all-or-nothing suppression mode for teams that already handle updates, alerts, and security checks outside the dashboard UI.
 
 ## Requirements
 
@@ -22,37 +26,94 @@ Some dashboards drown in plugin and update notices. The noise wears people down 
 ## Installation
 
 1. Copy the plugin to `wp-content/plugins/thisismyurl-admin-notice-nomore`.
-2. Activate Admin Notice NoMore from the Plugins screen.
-3. Reload your wp-admin pages.
+2. Activate **This Is My URL Admin Notice NoMore** from the Plugins screen.
+3. Reload wp-admin pages.
 
-## Scope and trade-offs
+## Scope and Trade-Offs
 
-This plugin is all-or-nothing by design, and that has real costs:
+- Runs in wp-admin only.
+- Hides all admin notices, including high-priority update/security nags.
+- Can mask helpful guidance from plugins that rely on notice-based UX.
 
-- It runs in wp-admin only.
-- It hides every admin notice, including high-priority update and security nags.
-- It can mask helpful guidance from plugins that lean on notice-based prompts.
+Use in staging first, and only deploy to production when your update/security process does not depend on admin notice visibility.
 
-Test it in staging first. Only move it to production once you are sure your update and security process does not depend on anyone seeing notices in the dashboard.
+## Support and Donations
 
-## Safety controls
+- Donate: https://thisismyurl.com/donate/
+- Support: https://thisismyurl.com/contact/
+- Source and releases: https://github.com/thisismyurl/thisismyurl-admin-notice-nomore
 
-- **Emergency bypass for administrators:** add `?thisismyurl_nomore_show_notices=1` to any admin URL to see notices again for that request
-- **Constant toggle:** `THISISMYURL_ADMIN_NOTICE_NOMORE_ENABLED`
-- **Constant bypass:** `THISISMYURL_ADMIN_NOTICE_NOMORE_BYPASS`
-- **Optional JS auto-dismiss:** `THISISMYURL_ADMIN_NOTICE_NOMORE_AUTO_DISMISS`
-- **Filters:** `thisismyurl_admin_notice_nomore_enabled`, `thisismyurl_admin_notice_nomore_bypass`, `thisismyurl_admin_notice_nomore_auto_dismiss`, `thisismyurl_admin_notice_nomore_css_selectors`
+## Safety Controls
 
-## Versioning
+- Emergency request bypass for administrators: `?thisismyurl_nomore_show_notices=1`
+- Constant toggle: `THISISMYURL_ADMIN_NOTICE_NOMORE_ENABLED`
+- Constant bypass: `THISISMYURL_ADMIN_NOTICE_NOMORE_BYPASS`
+- Optional JS auto-dismiss: `THISISMYURL_ADMIN_NOTICE_NOMORE_AUTO_DISMISS`
+- Filters: `thisismyurl_admin_notice_nomore_enabled`, `thisismyurl_admin_notice_nomore_bypass`, `thisismyurl_admin_notice_nomore_auto_dismiss`, `thisismyurl_admin_notice_nomore_css_selectors`
 
-Versions follow `X.Yjjj.hhmm` — year, Julian day, 24-hour time of the build.
+## Ease of Use
 
-## About
+- Settings page at Settings > Admin Notice NoMore (menu slug: thisismyurl-nomore-settings)
+- Plugin action links on the Plugins screen: Settings and Show Notices Once
+- Admin bar shortcut for administrators: Show Notices Once
+- Bypass links generate nonce-protected one-request bypass URLs
 
-Admin Notice NoMore is built and maintained by [Christopher Ross](https://thisismyurl.com/). I build focused WordPress tools for problems that keep showing up across real sites. No tracking, no ads, no upsells.
+## Per-Plugin Allowlist
 
-**WordPress.org:** [profiles.wordpress.org/thisismyurl](https://profiles.wordpress.org/thisismyurl/) · **GitHub:** [github.com/thisismyurl](https://github.com/thisismyurl) · **LinkedIn:** [linkedin.com/in/thisismyurl](https://linkedin.com/in/thisismyurl)
+Enter plugin slugs at Settings > Admin Notice NoMore. One slug per line, matching the plugin folder name (e.g. woocommerce, jetpack). Notices from allowlisted plugins pass through suppression. The plugin uses PHP Reflection to resolve each callback's source file and checks whether its path contains /plugins/<slug>/.
+
+## Accessibility Notes
+
+This plugin intentionally suppresses admin status/error notice visibility and may not be suitable for accessibility-sensitive admin environments.
+
+Accessibility review outcome:
+
+- Specialist review completed.
+- Result: all-notice suppression can create WCAG risk depending on admin-user needs.
+- Recommendation: use only in controlled/internal environments with alternate operational alerting.
+
+## Security and Quality Notes
+
+- Direct file access blocked using `ABSPATH` guard.
+- Allowlist option sanitized via sanitize_key() per slug.
+- Settings form uses register_setting() / settings_fields() for nonce and capability handling.
+- Reflection calls wrapped in try/catch; reflection failures default to removing the callback.
+- No external network calls.
+- Minimal runtime footprint.
+
+## Changelog
+
+### 1.6174.1641
+
+- Added Settings > Admin Notice NoMore settings page.
+- Added per-plugin allowlist: enter plugin slugs whose notices pass through suppression.
+- Allowlist stored in option thisismyurl_nomore_allowlist; slugs sanitized via sanitize_key().
+- Callback source files resolved via PHP Reflection (ReflectionFunction / ReflectionMethod).
+- Added Settings link to plugin action links row.
+- Bumped version to 1.6174.1641.
+
+### 1.6140
+
+- Updated display name to This Is My URL Admin Notice NoMore.
+- Added nonce-protected one-request bypass URLs.
+- Added quick bypass shortcuts in plugin action links and admin bar.
+- Version moved to calendar format `1.6NNN`.
+
+### 1.0.1
+
+- Added emergency bypass support for administrators via query parameter.
+- Added constants and filters for enable/bypass/autodismiss control.
+- Switched auto-dismiss to opt-in default.
+- Scoped CSS selectors to notice contexts in `#wpbody-content`.
+- Added accessibility and operational guidance.
+
+### 1.0.0
+
+- Initial release.
+- Added global removal of admin notice hooks.
+- Added CSS fallback for directly printed notice markup.
+- Added JavaScript auto-dismiss for dismissible notices.
 
 ## License
 
-GPL-2.0-or-later. See [LICENSE](LICENSE).
+GPL-2.0-or-later
