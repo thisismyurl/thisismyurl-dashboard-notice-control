@@ -2,7 +2,12 @@
 # Build tools should use this file (e.g. wp dist-archive) to strip non-distribution assets.
 
 .git
+.github
 .gitignore
 .distignore
 CHANGELOG.md
 README.md
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
+PILLARS.md
+SECURITY.md

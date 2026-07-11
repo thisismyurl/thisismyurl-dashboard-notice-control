@@ -1,15 +1,15 @@
-=== Admin Notice NoMore by Christopher Ross ===
+=== Thisismyurl Dashboard Notice Control ===
 Contributors: thisismyurl
 Author: Christopher Ross
 Author URI: https://thisismyurl.com/
-Plugin URI: https://github.com/thisismyurl/thisismyurl-admin-notice-nomore
+Plugin URI: https://thisismyurl.com/downloads/thisismyurl-dashboard-notice-control/
 Donate link: https://github.com/sponsors/thisismyurl
 Support Link: https://thisismyurl.com/contact/
 Tags: admin notices, dashboard cleanup, wp admin, notifications, admin ui
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.6174.1641
+Stable tag: 1.6192.1604
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -17,7 +17,7 @@ Automatically dismisses and hides WordPress admin notices across wp-admin.
 
 == Description ==
 
-Admin Notice NoMore by Christopher Ross suppresses all admin notices in the WordPress dashboard.
+Thisismyurl Dashboard Notice Control suppresses all admin notices in the WordPress dashboard.
 
 If this plugin saves you time, consider supporting the work at https://github.com/sponsors/thisismyurl.
 
@@ -36,29 +36,29 @@ Safety controls (v1.6174.1641):
 
 * Emergency request bypass for administrators (use the nonce-signed link from
 	the admin bar or Plugins screen; the nonce is required):
-	`?thisismyurl_nomore_show_notices=1&thisismyurl_nomore_nonce=...`
+	`?thisismyurl_dnc_show_notices=1&thisismyurl_dnc_nonce=...`
 * Constant toggle:
-	`THISISMYURL_ADMIN_NOTICE_NOMORE_ENABLED`
+	`THISISMYURL_DASHBOARD_NOTICE_CONTROL_ENABLED`
 * Constant bypass:
-	`THISISMYURL_ADMIN_NOTICE_NOMORE_BYPASS`
+	`THISISMYURL_DASHBOARD_NOTICE_CONTROL_BYPASS`
 * Optional JS auto-dismiss toggle (disabled by default):
-	`THISISMYURL_ADMIN_NOTICE_NOMORE_AUTO_DISMISS`
+	`THISISMYURL_DASHBOARD_NOTICE_CONTROL_AUTO_DISMISS`
 * Filters:
-	`thisismyurl_admin_notice_nomore_enabled`,
-	`thisismyurl_admin_notice_nomore_bypass`,
-	`thisismyurl_admin_notice_nomore_auto_dismiss`,
-	`thisismyurl_admin_notice_nomore_css_selectors`,
-	`thisismyurl_admin_notice_nomore_suppress_network`
+	`thisismyurl_dashboard_notice_control_enabled`,
+	`thisismyurl_dashboard_notice_control_bypass`,
+	`thisismyurl_dashboard_notice_control_auto_dismiss`,
+	`thisismyurl_dashboard_notice_control_css_selectors`,
+	`thisismyurl_dashboard_notice_control_suppress_network`
 
 Ease-of-use shortcuts:
 
-* Settings page at Settings > Admin Notice NoMore
+* Settings page at Settings > Thisismyurl Dashboard Notice Control
 * Plugin action links on Plugins screen: "Settings" and "Show Notices Once"
 * Admin bar shortcut for administrators: "Show Notices Once"
 
 Per-plugin allowlist (v1.6174.1641):
 
-Enter plugin slugs (one per line) at Settings > Admin Notice NoMore. Notices from allowlisted plugins pass through suppression. Matching is done by checking whether the callback source file path contains /plugins/<slug>/.
+Enter plugin slugs (one per line) at Settings > Thisismyurl Dashboard Notice Control. Notices from allowlisted plugins pass through suppression. Matching is done by checking whether the callback source file path contains /plugins/<slug>/.
 
 Support:
 
@@ -73,7 +73,7 @@ If your admin users rely on assistive technologies, do not run this plugin witho
 
 Minimum recommended practice:
 
-* Keep `THISISMYURL_ADMIN_NOTICE_NOMORE_AUTO_DISMISS` disabled (default).
+* Keep `THISISMYURL_DASHBOARD_NOTICE_CONTROL_AUTO_DISMISS` disabled (default).
 * Use the bypass query parameter during troubleshooting.
 * Validate critical admin flows with keyboard-only and screen reader testing.
 
@@ -104,14 +104,21 @@ It can interfere with plugins that rely on visible notices for workflow guidance
 Some plugins store a "dismissed" state only after the dismiss button is clicked. Auto-dismiss helps keep those plugins in a consistent state.
 
 = Is auto-dismiss enabled by default? =
-No. Auto-dismiss is opt-in using `THISISMYURL_ADMIN_NOTICE_NOMORE_AUTO_DISMISS` or the matching filter.
+No. Auto-dismiss is opt-in using `THISISMYURL_DASHBOARD_NOTICE_CONTROL_AUTO_DISMISS` or the matching filter.
 
 == Changelog ==
 
+= 1.6192.1604 =
+* Renamed the plugin to "Thisismyurl Dashboard Notice Control" (slug `thisismyurl-dashboard-notice-control`) per WordPress.org Plugin Review Team feedback: the previous name led with a generic phrase and was not distinctive enough for the admin-notices category.
+* Renamed every public identifier to match the new slug: class, constants, hooks and filters, the allowlist option, the settings-page slug, the bypass query vars, the text domain, and the main plugin filename.
+* Plugin URI now points at the plugin's home page.
+* Fixed an activation fatal: the enable/bypass gates ran at plugin-include time (before pluggable functions exist), causing a 500 on activation. The gates now evaluate at hook time.
+* Otherwise no functional change: the per-plugin allowlist, network-notice filter, and bypass behave exactly as in 1.6174.1641.
+
 = 1.6174.1641 =
-* Added Settings > Admin Notice NoMore settings page (menu slug thisismyurl-nomore-settings).
+* Added Settings > Thisismyurl Dashboard Notice Control settings page (menu slug thisismyurl-dashboard-notice-control-settings).
 * Added per-plugin allowlist: enter plugin slugs whose notices should pass through suppression.
-* Allowlist stored in option thisismyurl_nomore_allowlist; each slug sanitized via sanitize_key().
+* Allowlist stored in option thisismyurl_dashboard_notice_control_allowlist; each slug sanitized via sanitize_key().
 * Callback allowlist check uses ReflectionFunction / ReflectionMethod to resolve source file paths.
 * Added "Settings" link to plugin action links row.
 * Security: replaced esc_html() with a CSS-selector character allowlist regex for inline style output.
@@ -125,7 +132,7 @@ No. Auto-dismiss is opt-in using `THISISMYURL_ADMIN_NOTICE_NOMORE_AUTO_DISMISS` 
 
 = 1.6148 =
 * Security: the administrator bypass URL now requires a valid nonce on every path. The previous nonce-less fallback made the nonce-protected bypass claim decorative.
-* Multisite: network-scoped notice suppression (`network_admin_notices`, `user_admin_notices`) is now gated behind the `thisismyurl_admin_notice_nomore_suppress_network` filter (defaults to true) so one site no longer silences the whole network without an opt-out.
+* Multisite: network-scoped notice suppression (`network_admin_notices`, `user_admin_notices`) is now gated behind the `thisismyurl_dashboard_notice_control_suppress_network` filter (defaults to true) so one site no longer silences the whole network without an opt-out.
 * Support: the admin-bar item now shows whether notices are hidden or showing, so administrators can see suppression is active and don't lose update or security nags silently.
 
 = 1.6147 =
@@ -138,13 +145,13 @@ No. Auto-dismiss is opt-in using `THISISMYURL_ADMIN_NOTICE_NOMORE_AUTO_DISMISS` 
 * Added project governance files (PILLARS, CONTRIBUTING, SECURITY) and README badges.
 
 = 1.6140 =
-* Updated display name to "Admin Notice NoMore by Christopher Ross".
+* Updated display name to "Thisismyurl Dashboard Notice Control".
 * Added nonce-protected bypass URLs.
 * Added quick bypass shortcuts in plugin action links and admin bar.
 * Version moved to calendar format `1.6NNN`.
 
 = 1.0.1 =
-* Added emergency bypass (`?thisismyurl_nomore_show_notices=1`) for administrators.
+* Added emergency bypass (`?thisismyurl_dnc_show_notices=1`) for administrators.
 * Added constants and filters to enable, bypass, and configure behavior.
 * Disabled JS auto-dismiss by default (now opt-in).
 * Scoped CSS selectors to notice contexts in `#wpbody-content`.

@@ -1,15 +1,15 @@
 <?php
 /**
- * Plugin Name:       Admin Notice NoMore by Christopher Ross
- * Plugin URI:        https://thisismyurl.com
+ * Plugin Name:       Thisismyurl Dashboard Notice Control
+ * Plugin URI:        https://thisismyurl.com/downloads/thisismyurl-dashboard-notice-control/
  * Description:       Automatically dismisses and hides all WordPress admin notices.
- * Version:           1.6174.1641
+ * Version:           1.6192.1604
  * Author:            Christopher Ross
  * Author URI:        https://thisismyurl.com
  * Requires at least: 6.0
  * Tested up to:      7.0
  * Requires PHP:      7.4
- * Text Domain:       thisismyurl-admin-notice-nomore
+ * Text Domain:       thisismyurl-dashboard-notice-control
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  */
@@ -19,37 +19,37 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Suppresses all admin notices across wp-admin.
  */
-final class ThisIsMyURL_Admin_Notice_NoMore {
+final class ThisIsMyURL_Dashboard_Notice_Control {
 
 	/**
 	 * Plugin version.
 	 */
-	const VERSION = '1.6174.1641';
+	const VERSION = '1.6192.1604';
 
 	/**
 	 * Query var used for one-request bypass.
 	 */
-	const BYPASS_QUERY_VAR = 'thisismyurl_nomore_show_notices';
+	const BYPASS_QUERY_VAR = 'thisismyurl_dnc_show_notices';
 
 	/**
 	 * Query var carrying nonce for one-request bypass.
 	 */
-	const BYPASS_NONCE_VAR = 'thisismyurl_nomore_nonce';
+	const BYPASS_NONCE_VAR = 'thisismyurl_dnc_nonce';
 
 	/**
 	 * Action name for bypass nonce generation.
 	 */
-	const BYPASS_NONCE_ACTION = 'thisismyurl_nomore_show_notices';
+	const BYPASS_NONCE_ACTION = 'thisismyurl_dnc_show_notices';
 
 	/**
 	 * WP option name for the plugin allowlist.
 	 */
-	const ALLOWLIST_OPTION = 'thisismyurl_nomore_allowlist';
+	const ALLOWLIST_OPTION = 'thisismyurl_dashboard_notice_control_allowlist';
 
 	/**
 	 * Settings page menu slug.
 	 */
-	const SETTINGS_SLUG = 'thisismyurl-nomore-settings';
+	const SETTINGS_SLUG = 'thisismyurl-dashboard-notice-control-settings';
 
 	/**
 	 * Boot plugin hooks.
@@ -60,15 +60,27 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 		add_action( 'admin_menu', array( __CLASS__, 'add_settings_page' ) );
 		add_action( 'admin_init', array( __CLASS__, 'register_settings' ) );
 
-		if ( ! self::is_enabled() || self::is_bypassed() ) {
-			return;
-		}
-
+		// The enable/bypass gates CANNOT be evaluated here. init() runs at
+		// plugin-include time, before pluggable.php loads, and is_bypassed()
+		// calls current_user_can() — which fatals at that point. Register the
+		// suppression callbacks unconditionally; each evaluates suppression_active()
+		// itself at hook time, when the gates are safe to check.
 		add_action( 'admin_init', array( __CLASS__, 'remove_notice_actions' ), 9999 );
 		add_action( 'admin_head', array( __CLASS__, 'hide_notices_css' ), 9999 );
-		if ( self::auto_dismiss_enabled() ) {
-			add_action( 'admin_footer', array( __CLASS__, 'auto_dismiss_notices_js' ), 9999 );
-		}
+		add_action( 'admin_footer', array( __CLASS__, 'auto_dismiss_notices_js' ), 9999 );
+	}
+
+	/**
+	 * Whether suppression applies to the current request (master gate + bypass).
+	 *
+	 * Evaluated per-callback at hook time, never at include time — the bypass
+	 * check needs current_user_can()/wp_verify_nonce(), which only exist once
+	 * pluggable.php has loaded.
+	 *
+	 * @return bool
+	 */
+	public static function suppression_active() {
+		return self::is_enabled() && ! self::is_bypassed();
 	}
 
 	/**
@@ -79,11 +91,11 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 	public static function is_enabled() {
 		$enabled = true;
 
-		if ( defined( 'THISISMYURL_ADMIN_NOTICE_NOMORE_ENABLED' ) ) {
-			$enabled = (bool) THISISMYURL_ADMIN_NOTICE_NOMORE_ENABLED;
+		if ( defined( 'THISISMYURL_DASHBOARD_NOTICE_CONTROL_ENABLED' ) ) {
+			$enabled = (bool) THISISMYURL_DASHBOARD_NOTICE_CONTROL_ENABLED;
 		}
 
-		return (bool) apply_filters( 'thisismyurl_admin_notice_nomore_enabled', $enabled );
+		return (bool) apply_filters( 'thisismyurl_dashboard_notice_control_enabled', $enabled );
 	}
 
 	/**
@@ -94,8 +106,8 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 	public static function is_bypassed() {
 		$bypass = false;
 
-		if ( defined( 'THISISMYURL_ADMIN_NOTICE_NOMORE_BYPASS' ) ) {
-			$bypass = (bool) THISISMYURL_ADMIN_NOTICE_NOMORE_BYPASS;
+		if ( defined( 'THISISMYURL_DASHBOARD_NOTICE_CONTROL_BYPASS' ) ) {
+			$bypass = (bool) THISISMYURL_DASHBOARD_NOTICE_CONTROL_BYPASS;
 		}
 
 		if ( current_user_can( 'manage_options' ) && isset( $_GET[ self::BYPASS_QUERY_VAR ] ) ) {
@@ -105,7 +117,7 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 			}
 		}
 
-		return (bool) apply_filters( 'thisismyurl_admin_notice_nomore_bypass', $bypass );
+		return (bool) apply_filters( 'thisismyurl_dashboard_notice_control_bypass', $bypass );
 	}
 
 	/**
@@ -116,11 +128,11 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 	public static function auto_dismiss_enabled() {
 		$enabled = false;
 
-		if ( defined( 'THISISMYURL_ADMIN_NOTICE_NOMORE_AUTO_DISMISS' ) ) {
-			$enabled = (bool) THISISMYURL_ADMIN_NOTICE_NOMORE_AUTO_DISMISS;
+		if ( defined( 'THISISMYURL_DASHBOARD_NOTICE_CONTROL_AUTO_DISMISS' ) ) {
+			$enabled = (bool) THISISMYURL_DASHBOARD_NOTICE_CONTROL_AUTO_DISMISS;
 		}
 
-		return (bool) apply_filters( 'thisismyurl_admin_notice_nomore_auto_dismiss', $enabled );
+		return (bool) apply_filters( 'thisismyurl_dashboard_notice_control_auto_dismiss', $enabled );
 	}
 
 	/**
@@ -199,6 +211,10 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 	 * disabling the plugin entirely.
 	 */
 	public static function remove_notice_actions() {
+		if ( ! self::suppression_active() ) {
+			return;
+		}
+
 		$notice_hooks = array(
 			'admin_notices',
 			'all_admin_notices',
@@ -213,7 +229,7 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 		 *
 		 * @param bool $suppress Whether to suppress network-scoped notices.
 		 */
-		if ( apply_filters( 'thisismyurl_admin_notice_nomore_suppress_network', true ) ) {
+		if ( apply_filters( 'thisismyurl_dashboard_notice_control_suppress_network', true ) ) {
 			$notice_hooks[] = 'network_admin_notices';
 			$notice_hooks[] = 'user_admin_notices';
 		}
@@ -253,6 +269,10 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 	 * Hide notices in case anything still prints directly.
 	 */
 	public static function hide_notices_css() {
+		if ( ! self::suppression_active() ) {
+			return;
+		}
+
 		$selectors = array(
 			'#wpbody-content .notice',
 			'#wpbody-content .update-nag',
@@ -260,7 +280,7 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 			'#wpbody-content > .updated',
 		);
 
-		$selectors = (array) apply_filters( 'thisismyurl_admin_notice_nomore_css_selectors', $selectors );
+		$selectors = (array) apply_filters( 'thisismyurl_dashboard_notice_control_css_selectors', $selectors );
 		$selectors = array_filter( array_map( 'sanitize_text_field', $selectors ) );
 
 		if ( empty( $selectors ) ) {
@@ -283,7 +303,7 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 
 		$selector_css = implode( ',', $safe_selectors );
 
-		echo '<style id="thisismyurl-admin-notice-nomore">';
+		echo '<style id="thisismyurl-dashboard-notice-control">';
 		echo $selector_css . '{display:none !important;}'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- sanitized via CSS-selector allowlist above
 		echo '</style>';
 	}
@@ -292,7 +312,11 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 	 * Dismiss dismissible notices so plugins that persist flags are satisfied.
 	 */
 	public static function auto_dismiss_notices_js() {
-		echo '<script id="thisismyurl-admin-notice-nomore-js">';
+		if ( ! self::suppression_active() || ! self::auto_dismiss_enabled() ) {
+			return;
+		}
+
+		echo '<script id="thisismyurl-dashboard-notice-control-js">';
 		echo '(function(){';
 		echo 'var notices=document.querySelectorAll("#wpbody-content .notice.is-dismissible");';
 		echo 'for(var i=0;i<notices.length;i++){';
@@ -330,8 +354,8 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 	 */
 	public static function add_settings_page() {
 		add_options_page(
-			esc_html__( 'Admin Notice NoMore', 'thisismyurl-admin-notice-nomore' ),
-			esc_html__( 'Admin Notice NoMore', 'thisismyurl-admin-notice-nomore' ),
+			esc_html__( 'Thisismyurl Dashboard Notice Control', 'thisismyurl-dashboard-notice-control' ),
+			esc_html__( 'Thisismyurl Dashboard Notice Control', 'thisismyurl-dashboard-notice-control' ),
 			'manage_options',
 			self::SETTINGS_SLUG,
 			array( __CLASS__, 'render_settings_page' )
@@ -378,20 +402,20 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 	}
 
 	/**
-	 * Render the Settings > Admin Notice NoMore page.
+	 * Render the Settings > Thisismyurl Dashboard Notice Control page.
 	 */
 	public static function render_settings_page() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to access this page.', 'thisismyurl-admin-notice-nomore' ) );
+			wp_die( esc_html__( 'You do not have permission to access this page.', 'thisismyurl-dashboard-notice-control' ) );
 		}
 
 		$current_value = get_option( self::ALLOWLIST_OPTION, '' );
 		?>
 		<div class="wrap">
-			<h1><?php esc_html_e( 'Admin Notice NoMore Settings', 'thisismyurl-admin-notice-nomore' ); ?></h1>
+			<h1><?php esc_html_e( 'Thisismyurl Dashboard Notice Control Settings', 'thisismyurl-dashboard-notice-control' ); ?></h1>
 
-			<p><?php esc_html_e( 'Enter plugin slugs (one per line) whose admin notices should pass through even when suppression is active.', 'thisismyurl-admin-notice-nomore' ); ?></p>
-			<p><?php esc_html_e( 'Use the folder name of the plugin as it appears in wp-content/plugins/. For example: woocommerce, jetpack, akismet.', 'thisismyurl-admin-notice-nomore' ); ?></p>
+			<p><?php esc_html_e( 'Enter plugin slugs (one per line) whose admin notices should pass through even when suppression is active.', 'thisismyurl-dashboard-notice-control' ); ?></p>
+			<p><?php esc_html_e( 'Use the folder name of the plugin as it appears in wp-content/plugins/. For example: woocommerce, jetpack, akismet.', 'thisismyurl-dashboard-notice-control' ); ?></p>
 
 			<form method="post" action="options.php">
 				<?php settings_fields( self::SETTINGS_SLUG ); ?>
@@ -400,7 +424,7 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 					<tr>
 						<th scope="row">
 							<label for="<?php echo esc_attr( self::ALLOWLIST_OPTION ); ?>">
-								<?php esc_html_e( 'Allowed Plugin Slugs', 'thisismyurl-admin-notice-nomore' ); ?>
+								<?php esc_html_e( 'Allowed Plugin Slugs', 'thisismyurl-dashboard-notice-control' ); ?>
 							</label>
 						</th>
 						<td>
@@ -412,13 +436,13 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 								class="large-text code"
 							><?php echo esc_textarea( $current_value ); ?></textarea>
 							<p class="description">
-								<?php esc_html_e( 'One plugin slug per line. Each slug must match the plugin\'s folder name exactly.', 'thisismyurl-admin-notice-nomore' ); ?>
+								<?php esc_html_e( 'One plugin slug per line. Each slug must match the plugin\'s folder name exactly.', 'thisismyurl-dashboard-notice-control' ); ?>
 							</p>
 						</td>
 					</tr>
 				</table>
 
-				<?php submit_button( esc_html__( 'Save Allowlist', 'thisismyurl-admin-notice-nomore' ) ); ?>
+				<?php submit_button( esc_html__( 'Save Allowlist', 'thisismyurl-dashboard-notice-control' ) ); ?>
 			</form>
 		</div>
 		<?php
@@ -438,7 +462,7 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 		$settings_link = sprintf(
 			'<a href="%1$s">%2$s</a>',
 			esc_url( admin_url( 'options-general.php?page=' . self::SETTINGS_SLUG ) ),
-			esc_html__( 'Settings', 'thisismyurl-admin-notice-nomore' )
+			esc_html__( 'Settings', 'thisismyurl-dashboard-notice-control' )
 		);
 
 		// Prepend Settings so it appears first.
@@ -447,13 +471,13 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 		$links[] = sprintf(
 			'<a href="%1$s">%2$s</a>',
 			esc_url( self::bypass_url( admin_url() ) ),
-			esc_html__( 'Show Notices Once', 'thisismyurl-admin-notice-nomore' )
+			esc_html__( 'Show Notices Once', 'thisismyurl-dashboard-notice-control' )
 		);
 
 		$links[] = sprintf(
 			'<a href="%1$s" target="_blank" rel="noopener noreferrer">%2$s</a>',
 			esc_url( 'https://github.com/sponsors/thisismyurl' ),
-			esc_html__( 'Sponsor', 'thisismyurl-admin-notice-nomore' )
+			esc_html__( 'Sponsor', 'thisismyurl-dashboard-notice-control' )
 		);
 
 		return $links;
@@ -478,18 +502,18 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 		$suppressing = self::is_enabled() && ! self::is_bypassed();
 
 		$title = $suppressing
-			? esc_html__( 'Notices: hidden', 'thisismyurl-admin-notice-nomore' )
-			: esc_html__( 'Notices: showing', 'thisismyurl-admin-notice-nomore' );
+			? esc_html__( 'Notices: hidden', 'thisismyurl-dashboard-notice-control' )
+			: esc_html__( 'Notices: showing', 'thisismyurl-dashboard-notice-control' );
 
 		$admin_bar->add_node(
 			array(
-				'id'    => 'thisismyurl-admin-notice-nomore',
+				'id'    => 'thisismyurl-dashboard-notice-control',
 				'title' => $title,
 				'href'  => esc_url( self::bypass_url( admin_url() ) ),
 				'meta'  => array(
 					'title' => $suppressing
-						? esc_attr__( 'Admin notices are being suppressed by Admin Notice NoMore. Click to show notices for one request.', 'thisismyurl-admin-notice-nomore' )
-						: esc_attr__( 'Admin notices are visible for this request.', 'thisismyurl-admin-notice-nomore' ),
+						? esc_attr__( 'Admin notices are being suppressed by Thisismyurl Dashboard Notice Control. Click to show notices for one request.', 'thisismyurl-dashboard-notice-control' )
+						: esc_attr__( 'Admin notices are visible for this request.', 'thisismyurl-dashboard-notice-control' ),
 				),
 			)
 		);
@@ -497,9 +521,9 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 		if ( $suppressing ) {
 			$admin_bar->add_node(
 				array(
-					'parent' => 'thisismyurl-admin-notice-nomore',
-					'id'     => 'thisismyurl-admin-notice-nomore-bypass',
-					'title'  => esc_html__( 'Show notices once', 'thisismyurl-admin-notice-nomore' ),
+					'parent' => 'thisismyurl-dashboard-notice-control',
+					'id'     => 'thisismyurl-dashboard-notice-control-bypass',
+					'title'  => esc_html__( 'Show notices once', 'thisismyurl-dashboard-notice-control' ),
 					'href'   => esc_url( self::bypass_url( admin_url() ) ),
 				)
 			);
@@ -507,4 +531,4 @@ final class ThisIsMyURL_Admin_Notice_NoMore {
 	}
 }
 
-ThisIsMyURL_Admin_Notice_NoMore::init();
+ThisIsMyURL_Dashboard_Notice_Control::init();
