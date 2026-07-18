@@ -5,7 +5,7 @@ Tags: admin notices, dashboard cleanup, wp admin, notifications, admin ui
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.6192.1604
+Stable tag: 1.6199.1159
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -56,7 +56,7 @@ Ease-of-use shortcuts:
 
 Per-plugin allowlist:
 
-Enter plugin slugs (one per line) at Settings > Thisismyurl Dashboard Notice Control. Notices from allowlisted plugins pass through suppression. Matching compares the notice callback's source file against the plugins directory, so only a file living directly under that plugin's own folder is allowlisted. Slugs are lowercased, so a plugin folder with uppercase letters should be entered in lowercase.
+Enter plugin slugs (one per line) at Settings > Thisismyurl Dashboard Notice Control. Notices from allowlisted plugins pass through suppression. Matching compares the notice callback's source file against that plugin's own folder inside the plugins directory, including plugins installed via a symlink or junction. Slugs are lowercased, so a plugin folder with uppercase letters should be entered in lowercase.
 
 Support:
 
@@ -106,7 +106,11 @@ No. Auto-dismiss is opt-in using `THISISMYURL_DASHBOARD_NOTICE_CONTROL_AUTO_DISM
 
 == Changelog ==
 
-= 1.6192.1604 =
+= 1.6199.1159 =
+* Fixed the settings page storing the opposite of what it displayed when the enable/disable state is pinned by a PHP constant. A disabled checkbox is not submitted by the browser, so saving the allowlist wrote suppression OFF while the screen showed it ON -- surfacing only once the constant was removed.
+* Fixed the per-plugin allowlist never matching for plugins installed via symlink or junction (Bedrock, Composer-managed installs, and some development setups). Reflection resolves the real path, so those plugins reported a location outside the plugins directory and were silently never allowlisted.
+* The pinned on/off control now stays reachable by keyboard and screen reader, and its explanation is programmatically associated with the checkbox.
+* Corrected the settings-page save button label: the form saves the on/off switch as well as the allowlist.
 * Added an on/off switch to the settings page. Suppression could previously only be disabled with a PHP constant, which is no help to a site owner who cannot edit wp-config.php. A constant or filter still overrides the setting.
 * Fixed the per-plugin allowlist never matching on Windows hosts: reflection returns an OS-native path, so the hard-coded "/plugins/" comparison never matched a backslash path and the allowlist was silently inert. Paths are now normalised, and the match is anchored to the real plugins directory instead of matching anywhere in the path.
 * Corrected the plugin description: it said notices are "automatically dismissed", but JS auto-dismiss is opt-in and off by default. The description now states what the plugin does out of the box.
@@ -125,7 +129,7 @@ No. Auto-dismiss is opt-in using `THISISMYURL_DASHBOARD_NOTICE_CONTROL_AUTO_DISM
 * Callback allowlist check uses ReflectionFunction / ReflectionMethod to resolve source file paths.
 * Added "Settings" link to plugin action links row.
 * Security: replaced esc_html() with a CSS-selector character allowlist regex for inline style output.
-* Added autoload => false to register_setting() for the allowlist option.
+* Added autoload => false to register_setting() for the allowlist option (the autoload argument is honoured on WordPress 6.6 and later; on 6.0-6.5 it is ignored and the option autoloads).
 * Added uninstall.php to clean up options on plugin deletion.
 * Added .distignore to exclude .git/, CHANGELOG.md, README.md from distribution zip.
 
@@ -168,8 +172,8 @@ No. Auto-dismiss is opt-in using `THISISMYURL_DASHBOARD_NOTICE_CONTROL_AUTO_DISM
 
 == Upgrade Notice ==
 
-= 1.6192.1604 =
-Renamed to Thisismyurl Dashboard Notice Control. Adds a settings-page on/off switch, fixes an activation fatal, and fixes the per-plugin allowlist never matching on Windows hosts.
+= 1.6199.1159 =
+Renamed to Thisismyurl Dashboard Notice Control. Adds a settings-page on/off switch, fixes an activation fatal, and fixes the per-plugin allowlist never matching on Windows hosts or for symlinked plugin installs.
 
 = 1.6174.1641 =
 Adds per-plugin allowlist settings page, uninstall cleanup, and security hardening for the CSS output and bypass nonce path.

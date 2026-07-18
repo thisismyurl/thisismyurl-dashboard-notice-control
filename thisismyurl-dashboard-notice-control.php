@@ -3,7 +3,7 @@
  * Plugin Name:       Thisismyurl Dashboard Notice Control
  * Plugin URI:        https://thisismyurl.com/downloads/thisismyurl-dashboard-notice-control/
  * Description:       Hides admin notices in wp-admin, with a per-plugin allowlist and a one-request bypass for administrators.
- * Version:           1.6192.1604
+ * Version:           1.6199.1159
  * Author:            Christopher Ross
  * Author URI:        https://thisismyurl.com
  * Requires at least: 6.0
@@ -24,7 +24,7 @@ final class ThisIsMyURL_Dashboard_Notice_Control {
 	/**
 	 * Plugin version.
 	 */
-	const VERSION = '1.6192.1604';
+	const VERSION = '1.6199.1159';
 
 	/**
 	 * Query var used for one-request bypass.
@@ -206,8 +206,23 @@ final class ThisIsMyURL_Dashboard_Notice_Control {
 			$plugin_dir = trailingslashit( wp_normalize_path( WP_PLUGIN_DIR ) );
 
 			foreach ( $allowlist as $slug ) {
-				if ( 0 === strpos( $file, $plugin_dir . $slug . '/' ) ) {
-					return true;
+				$prefixes = array( $plugin_dir . $slug . '/' );
+
+				// getFileName() returns the RESOLVED real path, not the path used to include the
+				// file. A plugin installed via symlink or junction -- Bedrock, Composer-managed
+				// installs, and several dev setups -- therefore reports a path outside
+				// WP_PLUGIN_DIR and never matches. Resolving WP_PLUGIN_DIR itself does not help,
+				// because it is the plugin's own subfolder that is the link, so resolve per slug.
+				// $slug is sanitize_key()'d, so realpath() cannot be steered outside the directory.
+				$real = realpath( WP_PLUGIN_DIR . '/' . $slug );
+				if ( $real ) {
+					$prefixes[] = trailingslashit( wp_normalize_path( $real ) );
+				}
+
+				foreach ( $prefixes as $prefix ) {
+					if ( 0 === strpos( $file, $prefix ) ) {
+						return true;
+					}
 				}
 			}
 		} catch ( ReflectionException $e ) {
@@ -470,18 +485,40 @@ final class ThisIsMyURL_Dashboard_Notice_Control {
 							<?php esc_html_e( 'Notice suppression', 'thisismyurl-dashboard-notice-control' ); ?>
 						</th>
 						<td>
+							<?php if ( $pinned_in_code ) : ?>
+								<?php
+								// A disabled checkbox is not submitted by the browser, so options.php sees no
+								// value for this option and hands sanitize_enabled_option() a null -- which stores
+								// '0'. Saving the allowlist would then silently write suppression OFF while this
+								// screen still shows it ON, and the lie only surfaces once the constant is removed
+								// (exactly what the text below tells the admin to do). Post the displayed value so
+								// what is stored always matches what is shown.
+								?>
+								<input
+									type="hidden"
+									name="<?php echo esc_attr( self::ENABLED_OPTION ); ?>"
+									value="<?php echo $enabled_value ? '1' : '0'; ?>"
+								/>
+							<?php endif; ?>
 							<label for="<?php echo esc_attr( self::ENABLED_OPTION ); ?>">
 								<input
 									type="checkbox"
 									id="<?php echo esc_attr( self::ENABLED_OPTION ); ?>"
 									name="<?php echo esc_attr( self::ENABLED_OPTION ); ?>"
 									value="1"
+									aria-describedby="<?php echo esc_attr( self::ENABLED_OPTION ); ?>-description"
 									<?php checked( $enabled_value ); ?>
-									<?php disabled( $pinned_in_code ); ?>
+									<?php
+									// aria-disabled rather than disabled: a disabled input leaves the tab order, so a
+									// keyboard or screen-reader user never reaches it and never hears the explanation.
+									if ( $pinned_in_code ) {
+										echo ' aria-disabled="true" onclick="return false;"';
+									}
+									?>
 								/>
 								<?php esc_html_e( 'Hide admin notices in wp-admin', 'thisismyurl-dashboard-notice-control' ); ?>
 							</label>
-							<p class="description">
+							<p class="description" id="<?php echo esc_attr( self::ENABLED_OPTION ); ?>-description">
 								<?php
 								if ( $pinned_in_code ) {
 									esc_html_e( 'This setting is currently pinned by the THISISMYURL_DASHBOARD_NOTICE_CONTROL_ENABLED constant in your site configuration, so this checkbox has no effect until that constant is removed.', 'thisismyurl-dashboard-notice-control' );
@@ -513,7 +550,7 @@ final class ThisIsMyURL_Dashboard_Notice_Control {
 					</tr>
 				</table>
 
-				<?php submit_button( esc_html__( 'Save Allowlist', 'thisismyurl-dashboard-notice-control' ) ); ?>
+				<?php submit_button( __( 'Save changes', 'thisismyurl-dashboard-notice-control' ) ); ?>
 			</form>
 		</div>
 		<?php
