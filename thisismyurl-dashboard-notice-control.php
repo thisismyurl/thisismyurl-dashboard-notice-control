@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Thisismyurl Dashboard Notice Control
  * Plugin URI:        https://thisismyurl.com/downloads/thisismyurl-dashboard-notice-control/
- * Description:       Automatically dismisses and hides all WordPress admin notices.
+ * Description:       Hides admin notices in wp-admin, with a per-plugin allowlist and a one-request bypass for administrators.
  * Version:           1.6192.1604
  * Author:            Christopher Ross
  * Author URI:        https://thisismyurl.com
@@ -10,7 +10,7 @@
  * Tested up to:      7.0
  * Requires PHP:      7.4
  * Text Domain:       thisismyurl-dashboard-notice-control
- * License:           GPL-2.0-or-later
+ * License:           GPLv2 or later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  */
 
@@ -45,6 +45,11 @@ final class ThisIsMyURL_Dashboard_Notice_Control {
 	 * WP option name for the plugin allowlist.
 	 */
 	const ALLOWLIST_OPTION = 'thisismyurl_dashboard_notice_control_allowlist';
+
+	/**
+	 * WP option name for the master on/off switch.
+	 */
+	const ENABLED_OPTION = 'thisismyurl_dashboard_notice_control_enabled';
 
 	/**
 	 * Settings page menu slug.
@@ -89,8 +94,14 @@ final class ThisIsMyURL_Dashboard_Notice_Control {
 	 * @return bool
 	 */
 	public static function is_enabled() {
-		$enabled = true;
+		// Default ON preserves existing behaviour for anyone upgrading, but the setting gives a
+		// site owner a way to turn suppression off from the UI. This plugin hides update and
+		// security notices; requiring a PHP constant to stop that is a trap for the one user who
+		// most needs the off switch — the one who cannot edit wp-config.php.
+		$enabled = ( '0' !== get_option( self::ENABLED_OPTION, '1' ) );
 
+		// A constant or filter still wins, so existing deployments that pin this in code keep
+		// working exactly as before.
 		if ( defined( 'THISISMYURL_DASHBOARD_NOTICE_CONTROL_ENABLED' ) ) {
 			$enabled = (bool) THISISMYURL_DASHBOARD_NOTICE_CONTROL_ENABLED;
 		}
@@ -180,14 +191,22 @@ final class ThisIsMyURL_Dashboard_Notice_Control {
 				return false;
 			}
 
-			$file = $ref->getFileName();
+			// getFileName() returns an OS-native path, so on Windows hosts this is
+			// C:\...\wp-content\plugins\foo\bar.php. Matching a hard-coded '/plugins/' against
+			// backslashes never succeeds, which silently made the entire allowlist inert on every
+			// Windows install: a documented feature doing nothing, with no error to notice.
+			$file = wp_normalize_path( (string) $ref->getFileName() );
 
 			if ( ! $file ) {
 				return false;
 			}
 
+			// Anchor to the real plugin directory rather than searching anywhere in the path. An
+			// unanchored match would also accept .../plugins/other/vendor/plugins/<slug>/x.php.
+			$plugin_dir = trailingslashit( wp_normalize_path( WP_PLUGIN_DIR ) );
+
 			foreach ( $allowlist as $slug ) {
-				if ( false !== strpos( $file, '/plugins/' . $slug . '/' ) ) {
+				if ( 0 === strpos( $file, $plugin_dir . $slug . '/' ) ) {
 					return true;
 				}
 			}
@@ -368,6 +387,17 @@ final class ThisIsMyURL_Dashboard_Notice_Control {
 	public static function register_settings() {
 		register_setting(
 			self::SETTINGS_SLUG,
+			self::ENABLED_OPTION,
+			array(
+				'type'              => 'string',
+				'sanitize_callback' => array( __CLASS__, 'sanitize_enabled_option' ),
+				'default'           => '1',
+				'autoload'          => true,
+			)
+		);
+
+		register_setting(
+			self::SETTINGS_SLUG,
 			self::ALLOWLIST_OPTION,
 			array(
 				'type'              => 'string',
@@ -376,6 +406,19 @@ final class ThisIsMyURL_Dashboard_Notice_Control {
 				'autoload'          => false,
 			)
 		);
+	}
+
+	/**
+	 * Sanitize the master on/off option to a strict '1' or '0'.
+	 *
+	 * An unchecked checkbox is not submitted at all, so anything that is not an explicit
+	 * truthy value is stored as '0'.
+	 *
+	 * @param mixed $value Raw submitted value.
+	 * @return string '1' or '0'.
+	 */
+	public static function sanitize_enabled_option( $value ) {
+		return ( '1' === (string) $value || 'on' === (string) $value ) ? '1' : '0';
 	}
 
 	/**
@@ -409,18 +452,46 @@ final class ThisIsMyURL_Dashboard_Notice_Control {
 			wp_die( esc_html__( 'You do not have permission to access this page.', 'thisismyurl-dashboard-notice-control' ) );
 		}
 
-		$current_value = get_option( self::ALLOWLIST_OPTION, '' );
+		$current_value    = get_option( self::ALLOWLIST_OPTION, '' );
+		$enabled_value    = ( '0' !== get_option( self::ENABLED_OPTION, '1' ) );
+		$pinned_in_code   = defined( 'THISISMYURL_DASHBOARD_NOTICE_CONTROL_ENABLED' );
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Thisismyurl Dashboard Notice Control Settings', 'thisismyurl-dashboard-notice-control' ); ?></h1>
 
-			<p><?php esc_html_e( 'Enter plugin slugs (one per line) whose admin notices should pass through even when suppression is active.', 'thisismyurl-dashboard-notice-control' ); ?></p>
-			<p><?php esc_html_e( 'Use the folder name of the plugin as it appears in wp-content/plugins/. For example: woocommerce, jetpack, akismet.', 'thisismyurl-dashboard-notice-control' ); ?></p>
+			<p><?php esc_html_e( 'This plugin hides admin notices, including update and security messages. Turn suppression off here whenever you need to see them again.', 'thisismyurl-dashboard-notice-control' ); ?></p>
 
 			<form method="post" action="options.php">
 				<?php settings_fields( self::SETTINGS_SLUG ); ?>
 
 				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row">
+							<?php esc_html_e( 'Notice suppression', 'thisismyurl-dashboard-notice-control' ); ?>
+						</th>
+						<td>
+							<label for="<?php echo esc_attr( self::ENABLED_OPTION ); ?>">
+								<input
+									type="checkbox"
+									id="<?php echo esc_attr( self::ENABLED_OPTION ); ?>"
+									name="<?php echo esc_attr( self::ENABLED_OPTION ); ?>"
+									value="1"
+									<?php checked( $enabled_value ); ?>
+									<?php disabled( $pinned_in_code ); ?>
+								/>
+								<?php esc_html_e( 'Hide admin notices in wp-admin', 'thisismyurl-dashboard-notice-control' ); ?>
+							</label>
+							<p class="description">
+								<?php
+								if ( $pinned_in_code ) {
+									esc_html_e( 'This setting is currently pinned by the THISISMYURL_DASHBOARD_NOTICE_CONTROL_ENABLED constant in your site configuration, so this checkbox has no effect until that constant is removed.', 'thisismyurl-dashboard-notice-control' );
+								} else {
+									esc_html_e( 'Uncheck to show all admin notices again. Your allowlist below is kept either way.', 'thisismyurl-dashboard-notice-control' );
+								}
+								?>
+							</p>
+						</td>
+					</tr>
 					<tr>
 						<th scope="row">
 							<label for="<?php echo esc_attr( self::ALLOWLIST_OPTION ); ?>">
@@ -436,7 +507,7 @@ final class ThisIsMyURL_Dashboard_Notice_Control {
 								class="large-text code"
 							><?php echo esc_textarea( $current_value ); ?></textarea>
 							<p class="description">
-								<?php esc_html_e( 'One plugin slug per line. Each slug must match the plugin\'s folder name exactly.', 'thisismyurl-dashboard-notice-control' ); ?>
+								<?php esc_html_e( 'One plugin slug per line: the folder name as it appears in wp-content/plugins/, for example woocommerce, jetpack, akismet. Slugs are stored in lowercase, so enter them in lowercase. Notices from these plugins pass through even while suppression is on.', 'thisismyurl-dashboard-notice-control' ); ?>
 							</p>
 						</td>
 					</tr>
@@ -474,12 +545,9 @@ final class ThisIsMyURL_Dashboard_Notice_Control {
 			esc_html__( 'Show Notices Once', 'thisismyurl-dashboard-notice-control' )
 		);
 
-		$links[] = sprintf(
-			'<a href="%1$s" target="_blank" rel="noopener noreferrer">%2$s</a>',
-			esc_url( 'https://github.com/sponsors/thisismyurl' ),
-			esc_html__( 'Sponsor', 'thisismyurl-dashboard-notice-control' )
-		);
-
+		// No sponsorship link in the plugins-row actions: that row is functional UI, and a
+		// solicitation there reads as promotional under guideline 11. The readme's Donate link
+		// header and Description already carry the ask, which is the sanctioned placement.
 		return $links;
 	}
 

@@ -1,10 +1,6 @@
 === Thisismyurl Dashboard Notice Control ===
 Contributors: thisismyurl
-Author: Christopher Ross
-Author URI: https://thisismyurl.com/
-Plugin URI: https://thisismyurl.com/downloads/thisismyurl-dashboard-notice-control/
 Donate link: https://github.com/sponsors/thisismyurl
-Support Link: https://thisismyurl.com/contact/
 Tags: admin notices, dashboard cleanup, wp admin, notifications, admin ui
 Requires at least: 6.0
 Tested up to: 7.0
@@ -13,7 +9,7 @@ Stable tag: 1.6192.1604
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Automatically dismisses and hides WordPress admin notices across wp-admin.
+Hides admin notices in wp-admin, with a per-plugin allowlist and a one-request administrator bypass.
 
 == Description ==
 
@@ -32,8 +28,10 @@ Important:
 * This plugin intentionally hides all notices, including potentially important update or security messages.
 * Recommended for controlled environments where notice noise blocks productivity and you have an alternative update/security monitoring process.
 
-Safety controls (v1.6174.1641):
+Safety controls:
 
+* On/off switch at Settings > Thisismyurl Dashboard Notice Control. Suppression is on by default;
+	uncheck it to show all admin notices again without editing any code.
 * Emergency request bypass for administrators (use the nonce-signed link from
 	the admin bar or Plugins screen; the nonce is required):
 	`?thisismyurl_dnc_show_notices=1&thisismyurl_dnc_nonce=...`
@@ -52,13 +50,13 @@ Safety controls (v1.6174.1641):
 
 Ease-of-use shortcuts:
 
-* Settings page at Settings > Thisismyurl Dashboard Notice Control
+* Settings page at Settings > Thisismyurl Dashboard Notice Control (on/off switch + allowlist)
 * Plugin action links on Plugins screen: "Settings" and "Show Notices Once"
 * Admin bar shortcut for administrators: "Show Notices Once"
 
-Per-plugin allowlist (v1.6174.1641):
+Per-plugin allowlist:
 
-Enter plugin slugs (one per line) at Settings > Thisismyurl Dashboard Notice Control. Notices from allowlisted plugins pass through suppression. Matching is done by checking whether the callback source file path contains /plugins/<slug>/.
+Enter plugin slugs (one per line) at Settings > Thisismyurl Dashboard Notice Control. Notices from allowlisted plugins pass through suppression. Matching compares the notice callback's source file against the plugins directory, so only a file living directly under that plugin's own folder is allowlisted. Slugs are lowercased, so a plugin folder with uppercase letters should be entered in lowercase.
 
 Support:
 
@@ -109,6 +107,11 @@ No. Auto-dismiss is opt-in using `THISISMYURL_DASHBOARD_NOTICE_CONTROL_AUTO_DISM
 == Changelog ==
 
 = 1.6192.1604 =
+* Added an on/off switch to the settings page. Suppression could previously only be disabled with a PHP constant, which is no help to a site owner who cannot edit wp-config.php. A constant or filter still overrides the setting.
+* Fixed the per-plugin allowlist never matching on Windows hosts: reflection returns an OS-native path, so the hard-coded "/plugins/" comparison never matched a backslash path and the allowlist was silently inert. Paths are now normalised, and the match is anchored to the real plugins directory instead of matching anywhere in the path.
+* Corrected the plugin description: it said notices are "automatically dismissed", but JS auto-dismiss is opt-in and off by default. The description now states what the plugin does out of the box.
+* Removed the sponsorship link from the plugins-row action links.
+* Uninstall now clears options on every site in a multisite network, not only the one that ran the deletion.
 * Renamed the plugin to "Thisismyurl Dashboard Notice Control" (slug `thisismyurl-dashboard-notice-control`) per WordPress.org Plugin Review Team feedback: the previous name led with a generic phrase and was not distinctive enough for the admin-notices category.
 * Renamed every public identifier to match the new slug: class, constants, hooks and filters, the allowlist option, the settings-page slug, the bypass query vars, the text domain, and the main plugin filename.
 * Plugin URI now points at the plugin's home page.
@@ -164,6 +167,9 @@ No. Auto-dismiss is opt-in using `THISISMYURL_DASHBOARD_NOTICE_CONTROL_AUTO_DISM
 * Added JavaScript auto-dismiss for dismissible notices.
 
 == Upgrade Notice ==
+
+= 1.6192.1604 =
+Renamed to Thisismyurl Dashboard Notice Control. Adds a settings-page on/off switch, fixes an activation fatal, and fixes the per-plugin allowlist never matching on Windows hosts.
 
 = 1.6174.1641 =
 Adds per-plugin allowlist settings page, uninstall cleanup, and security hardening for the CSS output and bypass nonce path.
