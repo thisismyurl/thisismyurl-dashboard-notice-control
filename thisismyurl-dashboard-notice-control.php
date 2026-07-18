@@ -3,7 +3,7 @@
  * Plugin Name:       Thisismyurl Dashboard Notice Control
  * Plugin URI:        https://thisismyurl.com/downloads/thisismyurl-dashboard-notice-control/
  * Description:       Hides admin notices in wp-admin, with a per-plugin allowlist and a one-request bypass for administrators.
- * Version:           1.6199.1159
+ * Version:           1.6199.1319
  * Author:            Christopher Ross
  * Author URI:        https://thisismyurl.com
  * Requires at least: 6.0
@@ -24,7 +24,7 @@ final class ThisIsMyURL_Dashboard_Notice_Control {
 	/**
 	 * Plugin version.
 	 */
-	const VERSION = '1.6199.1159';
+	const VERSION = '1.6199.1319';
 
 	/**
 	 * Query var used for one-request bypass.
@@ -70,7 +70,13 @@ final class ThisIsMyURL_Dashboard_Notice_Control {
 		// calls current_user_can() — which fatals at that point. Register the
 		// suppression callbacks unconditionally; each evaluates suppression_active()
 		// itself at hook time, when the gates are safe to check.
-		add_action( 'admin_init', array( __CLASS__, 'remove_notice_actions' ), 9999 );
+		//
+		// Removal runs on `current_screen`, not `admin_init`. wp-admin/admin.php fires
+		// admin_init BEFORE set_current_screen(), so get_current_screen() is still null at
+		// that point and the per-screen filter below would never see a screen. current_screen
+		// still fires well before admin-header.php renders any notice, and it catches every
+		// callback registered up to that point -- a superset of what admin_init caught.
+		add_action( 'current_screen', array( __CLASS__, 'remove_notice_actions' ), 9999 );
 		add_action( 'admin_head', array( __CLASS__, 'hide_notices_css' ), 9999 );
 		add_action( 'admin_footer', array( __CLASS__, 'auto_dismiss_notices_js' ), 9999 );
 	}
@@ -85,7 +91,53 @@ final class ThisIsMyURL_Dashboard_Notice_Control {
 	 * @return bool
 	 */
 	public static function suppression_active() {
-		return self::is_enabled() && ! self::is_bypassed();
+		if ( ! self::is_enabled() || self::is_bypassed() ) {
+			return false;
+		}
+
+		return self::suppress_on_current_screen();
+	}
+
+	/**
+	 * Whether suppression applies on the current admin screen.
+	 *
+	 * Lets a site keep notices visible where they carry real workflow meaning (a
+	 * plugin's own settings screen, Updates, Site Health) while staying suppressed
+	 * everywhere else, without turning the plugin off entirely.
+	 *
+	 * @return bool
+	 */
+	public static function suppress_on_current_screen() {
+		$screen = null;
+
+		// get_current_screen() is undefined on some early/AJAX paths and returns null
+		// before set_current_screen() has run, so never assume a screen object exists.
+		if ( function_exists( 'get_current_screen' ) ) {
+			$screen = get_current_screen();
+		}
+
+		$screen_id = ( $screen instanceof WP_Screen ) ? $screen->id : '';
+
+		// The plugin's own settings screen is exempt by default. settings_errors() echoes the
+		// "Settings saved." confirmation directly rather than through a notice hook, so the CSS
+		// layer would hide it: an admin saves the allowlist, the page reloads, and nothing at all
+		// confirms it worked. On this one screen that reads as a broken plugin. Filterable, so a
+		// site that genuinely wants silence everywhere can still return true.
+		$suppress = ( 'settings_page_' . self::SETTINGS_SLUG !== $screen_id );
+
+		/**
+		 * Filter whether admin notices are suppressed on this specific screen.
+		 *
+		 * Return false to leave notices visible on the given screen. Defaults to true
+		 * everywhere except this plugin's own settings screen, so suppression behaves as
+		 * before unless a site opts a screen out. Keep implementations side-effect free:
+		 * this runs on every notice-suppression pass, several times per request.
+		 *
+		 * @param bool           $suppress  Whether to suppress on this screen.
+		 * @param string         $screen_id Current screen ID, or '' if not yet known.
+		 * @param WP_Screen|null $screen    Current screen object, or null.
+		 */
+		return (bool) apply_filters( 'thisismyurl_dashboard_notice_control_suppress_on_screen', $suppress, $screen_id, $screen );
 	}
 
 	/**
@@ -172,16 +224,75 @@ final class ThisIsMyURL_Dashboard_Notice_Control {
 	 * @param callable $callback The callback to inspect.
 	 * @return bool True if the callback belongs to an allowlisted plugin.
 	 */
-	public static function callback_is_allowlisted( $callback ) {
-		$allowlist = self::get_allowlist();
+	/**
+	 * Resolved directory prefixes for every allowlisted plugin, computed once per request.
+	 *
+	 * @var string[]|null
+	 */
+	private static $allowlist_prefixes = null;
 
-		if ( empty( $allowlist ) ) {
+	/**
+	 * Directory prefixes that count as "inside an allowlisted plugin".
+	 *
+	 * Memoised because callback_is_allowlisted() runs once per registered notice callback,
+	 * and resolving these per callback per slug meant N x M realpath() stats on every admin
+	 * page load. The inputs cannot change mid-request, so compute them once.
+	 *
+	 * @return string[]
+	 */
+	public static function get_allowlist_prefixes() {
+		if ( null !== self::$allowlist_prefixes ) {
+			return self::$allowlist_prefixes;
+		}
+
+		$prefixes = array();
+
+		// Anchor to the real plugin directory rather than searching anywhere in the path. An
+		// unanchored match would also accept .../plugins/other/vendor/plugins/<slug>/x.php.
+		$plugin_dir = trailingslashit( wp_normalize_path( WP_PLUGIN_DIR ) );
+
+		foreach ( self::get_allowlist() as $slug ) {
+			$prefixes[] = $plugin_dir . $slug . '/';
+
+			// getFileName() returns the RESOLVED real path, not the path used to include the
+			// file. A plugin installed via symlink or junction -- Bedrock, Composer-managed
+			// installs, and several dev setups -- therefore reports a path outside
+			// WP_PLUGIN_DIR and never matches. Resolving WP_PLUGIN_DIR itself does not help,
+			// because it is the plugin's own subfolder that is the link, so resolve per slug.
+			// $slug is sanitize_key()'d, so realpath() cannot be steered outside the directory.
+			$real = realpath( WP_PLUGIN_DIR . '/' . $slug );
+			if ( $real ) {
+				$prefixes[] = trailingslashit( wp_normalize_path( $real ) );
+			}
+		}
+
+		self::$allowlist_prefixes = array_values( array_unique( $prefixes ) );
+
+		return self::$allowlist_prefixes;
+	}
+
+	/**
+	 * Check whether a callback's source file is within an allowed plugin's directory.
+	 *
+	 * @param callable $callback The callback to inspect.
+	 * @return bool True if the callback belongs to an allowlisted plugin.
+	 */
+	public static function callback_is_allowlisted( $callback ) {
+		$prefixes = self::get_allowlist_prefixes();
+
+		if ( empty( $prefixes ) ) {
 			return false;
 		}
 
 		try {
 			if ( is_array( $callback ) ) {
-				$ref  = new ReflectionMethod( $callback[0], $callback[1] );
+				// Guard the shape before indexing: a malformed callback would otherwise emit an
+				// "Undefined array key 1" warning before ReflectionException could catch it.
+				if ( 2 !== count( $callback ) ) {
+					return false;
+				}
+
+				$ref = new ReflectionMethod( $callback[0], $callback[1] );
 			} elseif ( is_string( $callback ) && false !== strpos( $callback, '::' ) ) {
 				list( $class, $method ) = explode( '::', $callback, 2 );
 				$ref = new ReflectionMethod( $class, $method );
@@ -192,37 +303,18 @@ final class ThisIsMyURL_Dashboard_Notice_Control {
 			}
 
 			// getFileName() returns an OS-native path, so on Windows hosts this is
-			// C:\...\wp-content\plugins\foo\bar.php. Matching a hard-coded '/plugins/' against
-			// backslashes never succeeds, which silently made the entire allowlist inert on every
-			// Windows install: a documented feature doing nothing, with no error to notice.
+			// an absolute Windows path using backslashes. Matching a hard-coded '/plugins/'
+			// against that never succeeds, which silently made the entire allowlist inert on
+			// every Windows install: a documented feature doing nothing, with no error to notice.
 			$file = wp_normalize_path( (string) $ref->getFileName() );
 
 			if ( ! $file ) {
 				return false;
 			}
 
-			// Anchor to the real plugin directory rather than searching anywhere in the path. An
-			// unanchored match would also accept .../plugins/other/vendor/plugins/<slug>/x.php.
-			$plugin_dir = trailingslashit( wp_normalize_path( WP_PLUGIN_DIR ) );
-
-			foreach ( $allowlist as $slug ) {
-				$prefixes = array( $plugin_dir . $slug . '/' );
-
-				// getFileName() returns the RESOLVED real path, not the path used to include the
-				// file. A plugin installed via symlink or junction -- Bedrock, Composer-managed
-				// installs, and several dev setups -- therefore reports a path outside
-				// WP_PLUGIN_DIR and never matches. Resolving WP_PLUGIN_DIR itself does not help,
-				// because it is the plugin's own subfolder that is the link, so resolve per slug.
-				// $slug is sanitize_key()'d, so realpath() cannot be steered outside the directory.
-				$real = realpath( WP_PLUGIN_DIR . '/' . $slug );
-				if ( $real ) {
-					$prefixes[] = trailingslashit( wp_normalize_path( $real ) );
-				}
-
-				foreach ( $prefixes as $prefix ) {
-					if ( 0 === strpos( $file, $prefix ) ) {
-						return true;
-					}
+			foreach ( $prefixes as $prefix ) {
+				if ( 0 === strpos( $file, $prefix ) ) {
+					return true;
 				}
 			}
 		} catch ( ReflectionException $e ) {
@@ -604,7 +696,11 @@ final class ThisIsMyURL_Dashboard_Notice_Control {
 			return;
 		}
 
-		$suppressing = self::is_enabled() && ! self::is_bypassed();
+		// Must include the per-screen decision. Reporting only the global gates would print
+		// "Notices: hidden" on a screen the suppress_on_screen filter exempts, while notices
+		// sit visibly on that same page. This indicator exists to prevent exactly that
+		// confusion, so it has to agree with what the visitor can see.
+		$suppressing = self::suppression_active();
 
 		$title = $suppressing
 			? esc_html__( 'Notices: hidden', 'thisismyurl-dashboard-notice-control' )
@@ -637,3 +733,101 @@ final class ThisIsMyURL_Dashboard_Notice_Control {
 }
 
 ThisIsMyURL_Dashboard_Notice_Control::init();
+
+/**
+ * Read-only WP-CLI reporting for Thisismyurl Dashboard Notice Control.
+ *
+ * Deliberately read-only. This plugin's whole risk profile is that it hides update and
+ * security messages, so the useful CLI question is "what is this site currently hiding,
+ * and why" -- answerable from a deploy script or a fleet loop without loading wp-admin.
+ * Nothing here writes an option or changes behaviour; use the settings screen, the
+ * constants, or the filters for that.
+ */
+if ( defined( 'WP_CLI' ) && WP_CLI ) {
+
+	/**
+	 * Read-only reporting for Thisismyurl Dashboard Notice Control.
+	 *
+	 * Reports what this site is currently hiding and what is controlling it. Never writes.
+	 */
+	final class ThisIsMyURL_Dashboard_Notice_Control_CLI {
+
+		/**
+		 * Show whether admin-notice suppression is active, and what is controlling it.
+		 *
+		 * ## OPTIONS
+		 *
+		 * [--format=<format>]
+		 * : Render output in a particular format.
+		 * ---
+		 * default: table
+		 * options:
+		 *   - table
+		 *   - json
+		 *   - yaml
+		 *   - csv
+		 * ---
+		 *
+		 * ## EXAMPLES
+		 *
+		 *     wp thisismyurl-dashboard-notice-control status
+		 *     wp thisismyurl-dashboard-notice-control status --format=json
+		 *
+		 * @param array $args       Positional arguments (unused).
+		 * @param array $assoc_args Associative arguments.
+		 */
+		public function status( $args, $assoc_args ) {
+			$allowlist = ThisIsMyURL_Dashboard_Notice_Control::get_allowlist();
+
+			// The bypass is a per-request, nonce-signed thing tied to a logged-in admin, so it
+			// can never be true under WP-CLI. Report the constant rather than implying otherwise.
+			$bypass_constant = defined( 'THISISMYURL_DASHBOARD_NOTICE_CONTROL_BYPASS' )
+				? ( THISISMYURL_DASHBOARD_NOTICE_CONTROL_BYPASS ? 'true' : 'false' )
+				: 'not defined';
+
+			$enabled_constant = defined( 'THISISMYURL_DASHBOARD_NOTICE_CONTROL_ENABLED' )
+				? ( THISISMYURL_DASHBOARD_NOTICE_CONTROL_ENABLED ? 'true' : 'false' )
+				: 'not defined';
+
+			$rows = array(
+				array(
+					'setting' => 'version',
+					'value'   => ThisIsMyURL_Dashboard_Notice_Control::VERSION,
+				),
+				array(
+					'setting' => 'suppression_enabled',
+					'value'   => ThisIsMyURL_Dashboard_Notice_Control::is_enabled() ? 'yes' : 'no',
+				),
+				array(
+					'setting' => 'enabled_constant',
+					'value'   => $enabled_constant,
+				),
+				array(
+					'setting' => 'bypass_constant',
+					'value'   => $bypass_constant,
+				),
+				array(
+					'setting' => 'auto_dismiss_enabled',
+					'value'   => ThisIsMyURL_Dashboard_Notice_Control::auto_dismiss_enabled() ? 'yes' : 'no',
+				),
+				array(
+					'setting' => 'suppress_network_notices',
+					'value'   => apply_filters( 'thisismyurl_dashboard_notice_control_suppress_network', true ) ? 'yes' : 'no',
+				),
+				array(
+					'setting' => 'allowlisted_plugins',
+					'value'   => empty( $allowlist ) ? '(none)' : implode( ', ', $allowlist ),
+				),
+			);
+
+			WP_CLI\Utils\format_items(
+				isset( $assoc_args['format'] ) ? $assoc_args['format'] : 'table',
+				$rows,
+				array( 'setting', 'value' )
+			);
+		}
+	}
+
+	WP_CLI::add_command( 'thisismyurl-dashboard-notice-control', 'ThisIsMyURL_Dashboard_Notice_Control_CLI' );
+}
+

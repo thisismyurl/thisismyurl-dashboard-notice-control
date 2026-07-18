@@ -5,7 +5,7 @@ Tags: admin notices, dashboard cleanup, wp admin, notifications, admin ui
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.6199.1159
+Stable tag: 1.6199.1319
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -46,7 +46,8 @@ Safety controls:
 	`thisismyurl_dashboard_notice_control_bypass`,
 	`thisismyurl_dashboard_notice_control_auto_dismiss`,
 	`thisismyurl_dashboard_notice_control_css_selectors`,
-	`thisismyurl_dashboard_notice_control_suppress_network`
+	`thisismyurl_dashboard_notice_control_suppress_network`,
+	`thisismyurl_dashboard_notice_control_suppress_on_screen`
 
 Ease-of-use shortcuts:
 
@@ -62,6 +63,33 @@ Support:
 
 * Donations: https://github.com/sponsors/thisismyurl
 * Support: https://thisismyurl.com/contact/
+
+== Per-screen exemptions ==
+
+Notices can be kept visible on individual admin screens while staying suppressed everywhere else, so a screen where a notice carries real workflow meaning does not have to be won by turning the plugin off.
+
+`add_filter( 'thisismyurl_dashboard_notice_control_suppress_on_screen', function ( $suppress, $screen_id ) {
+	// Keep notices on the Updates and Site Health screens.
+	if ( in_array( $screen_id, array( 'update-core', 'site-health' ), true ) ) {
+		return false;
+	}
+	return $suppress;
+}, 10, 2 );`
+
+The filter receives the suppression decision, the current screen ID, and the `WP_Screen` object. When no screen has been determined yet the ID is an empty string and suppression stays on, so an unrecognised context never silently stops suppressing. Keep your callback free of side effects: it runs several times per request.
+
+This plugin's own settings screen is exempt by default. WordPress prints the "Settings saved." confirmation directly rather than through a notice hook, so without the exemption you would save the allowlist and get no confirmation at all. Return true from the filter for that screen if you want it suppressed anyway.
+
+Note that the same is true of other Settings screens: saving Settings > General or Reading prints its confirmation the same way, and it is hidden while suppression is on. Exempt those screens with the filter if your team relies on that confirmation.
+
+== WP-CLI ==
+
+A read-only status command reports what the site is currently hiding and what is controlling it, which is useful in a deploy script or across a fleet without opening wp-admin.
+
+`wp thisismyurl-dashboard-notice-control status`
+`wp thisismyurl-dashboard-notice-control status --format=json`
+
+It reports the plugin version, whether suppression is enabled, whether the enable and bypass constants are defined, whether JS auto-dismiss is on, whether network notices are suppressed, and the current allowlist. The command never writes anything; use the settings screen, the constants, or the filters to change behaviour.
 
 == Accessibility Considerations ==
 
@@ -106,7 +134,14 @@ No. Auto-dismiss is opt-in using `THISISMYURL_DASHBOARD_NOTICE_CONTROL_AUTO_DISM
 
 == Changelog ==
 
-= 1.6199.1159 =
+= 1.6199.1319 =
+* The admin-bar indicator now reflects per-screen exemptions. Without this it would report "Notices: hidden" on a screen where notices were plainly visible.
+* This plugin's own settings screen is now exempt from suppression by default, so saving the allowlist shows its "Settings saved." confirmation instead of appearing to do nothing.
+* Allowlist directory prefixes are resolved once per request rather than once per notice callback per slug.
+* Hardened the allowlist against malformed array callbacks, which could emit a PHP warning before reflection caught them.
+* Added a per-screen exemption filter (thisismyurl_dashboard_notice_control_suppress_on_screen) so notices can stay visible on chosen screens without disabling the plugin.
+* Added a read-only WP-CLI status command reporting suppression state, constants, and the allowlist.
+* Notice removal now runs on current_screen rather than admin_init. WordPress fires admin_init before set_current_screen(), so the screen was not yet known; the new timing still runs before any notice renders and catches every callback the old timing caught.
 * Fixed the settings page storing the opposite of what it displayed when the enable/disable state is pinned by a PHP constant. A disabled checkbox is not submitted by the browser, so saving the allowlist wrote suppression OFF while the screen showed it ON -- surfacing only once the constant was removed.
 * Fixed the per-plugin allowlist never matching for plugins installed via symlink or junction (Bedrock, Composer-managed installs, and some development setups). Reflection resolves the real path, so those plugins reported a location outside the plugins directory and were silently never allowlisted.
 * The pinned on/off control now stays reachable by keyboard and screen reader, and its explanation is programmatically associated with the checkbox.
@@ -172,8 +207,8 @@ No. Auto-dismiss is opt-in using `THISISMYURL_DASHBOARD_NOTICE_CONTROL_AUTO_DISM
 
 == Upgrade Notice ==
 
-= 1.6199.1159 =
-Renamed to Thisismyurl Dashboard Notice Control. Adds a settings-page on/off switch, fixes an activation fatal, and fixes the per-plugin allowlist never matching on Windows hosts or for symlinked plugin installs.
+= 1.6199.1319 =
+Adds per-screen exemptions and a read-only WP-CLI status command. Renamed to Thisismyurl Dashboard Notice Control. Adds a settings-page on/off switch, fixes an activation fatal, and fixes the per-plugin allowlist never matching on Windows hosts or for symlinked plugin installs.
 
 = 1.6174.1641 =
 Adds per-plugin allowlist settings page, uninstall cleanup, and security hardening for the CSS output and bypass nonce path.
